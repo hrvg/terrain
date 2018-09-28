@@ -141,7 +141,7 @@ SEXP _do_terrain_(SEXP d, SEXP dim, SEXP res, SEXP un, SEXP opt, SEXP lonlat, SE
 				v = xd[i + a[j]]; 
 				if (v > max) {
 					max = v;
-				} else if (v < min) {
+ 				} else if (v < min) {
 					min = v;
 				}
 			}
@@ -188,7 +188,7 @@ SEXP _do_terrain_(SEXP d, SEXP dim, SEXP res, SEXP un, SEXP opt, SEXP lonlat, SE
 			for (i = ncol+1; i < (ncol * (nrow-1)-1); i++) {
 				zx = xd[i-1] * xw[0] + xd[i+1] * xw[1];
 				zy = xd[i-ncol] * yw[0] + xd[i+ncol] * yw[1];
-				xval[i+addn] = sqrt( pow(zy, 2) + pow(zx, 2)  );
+				xval[i+addn] = sqrt( pow(zy, 2) + pow(zx, 2) ) ;
 			}
 		}
 
@@ -437,52 +437,72 @@ SEXP _do_terrain_(SEXP d, SEXP dim, SEXP res, SEXP un, SEXP opt, SEXP lonlat, SE
 	if (option[8]) {
 		// planform curvature 8 neighbors - Herve Guillon	
 			addn = add * n;
-			double r, t, s;
+			double pr, pt, ps;
 			if (geo) {
 				int k, q;
-				double xwi[6] = {-1,-1,-1,1,1,1};
+				double xwi[6] = {-1,1,-1,1,-1,1};
 				double xw[6] = {0,0,0,0,0,0};
-				double yw[6] = {-1,1,-1,1,-1,1};
+				double yw[6] = {1,1,1,-1,-1,-1};
+				double swi[4] = {-1,1,1,-1};
+				double sw[4] = {0,0,0,0};
+				double rwi[9] = {1,-2,1,1,-2,1,1,-2,1};
+				double rw[9] = {0,0,0,0,0,0,0,0,0};
+				double tw[9] = {1,1,1,-2,-2,-2,1,1,1};
 				
 				for (i=0; i<6; i++) {
-					yw[i] = yw[i] / (8 * dy);
+					yw[i] = yw[i] / (6 * dy);
+				}
+				for (i=0; i<9; i++) {
+					tw[i] = tw[i] / (3 * pow(dy, 2));
 				}
 							
 				for (i = ncol; i < (ncol * (nrow-1)-1); i++) {
 					if (i % ncol == 0) {
 						q = i / ncol;
 						for (k=0; k<6; k++) {
-							xw[k] = xwi[k] / (8 * ddx[q]);
+							xw[k] = xwi[k] / (6 * ddx[q]);
+						}
+						for (k=0; k<4; k++) {
+							sw[k] = swi[k] / (4 * dy * ddx[q]);
+						}
+						for (k=0; k<9; k++) {
+							rw[k] = rwi[k] / (3 * pow(ddx[q],2));
 						}
 					}
-					zx = xd[i-1-ncol] * xw[0] + xd[i-1] * xw[1] + xd[i-1+ncol] * xw[2]
-							+ xd[i+1-ncol] * xw[3] + xd[i+1] * xw[4] + xd[i+1+ncol] * xw[5];
-					zy = xd[i-1-ncol] * yw[0] + xd[i-1+ncol] * yw[1] + xd[i-ncol] * yw[2] 
-							+ xd[i+ncol] * yw[3] + xd[i+1-ncol] * yw[4] + xd[i+1+ncol] * yw[5];
-					r = ( xd[i-1-ncol] + xd[i-1] + xd[i-1+ncol] + xd[i+1-ncol] + xd[i+1] + xd[i+1+ncol] - 2 * ( xd[i-ncol] + xd[i] + xd[i+ncol] ) ) / ( 3 * pow(dx,3) );
-					t = ( xd[i-1-ncol] + xd[i-ncol] + xd[i+1-ncol] + xd[i-1+ncol] + xd[i+ncol] + xd[i+1+ncol] - 2 * ( xd[i-1] + xd[i] + xd[i+1] ) ) / ( 3 * pow(dy,3) );
-	 				s = ( xd[i+1-ncol] + xd[i-1+ncol] - xd[i-1-ncol] - xd[i+1+ncol] ) / ( 4 * dx * dy );
-					xval[i+addn] = -(pow(zy,2)*r-2*zx*zy*s+pow(zx,2)*t)/((pow(zx,2)+pow(zy,2))*sqrt(1+pow(zx,2)+pow(zy,2)));
+					pr = xd[i-1-ncol] * rw[0] + xd[i-ncol] * rw[1] + xd[i+1-ncol] * rw[2] + xd[i-1] * rw[3] + xd[i] * rw[4] + xd[i+1] * rw[5] + xd[i-1+ncol] * rw[6] + xd[i+ncol] * rw[7] + xd[i+1+ncol] * rw[8];
+					pt = xd[i-1-ncol] * tw[0] + xd[i-ncol] * tw[1] + xd[i+1-ncol] * tw[2] + xd[i-1] * tw[3] + xd[i] * tw[4] + xd[i+1] * tw[5] + xd[i-1+ncol] * tw[6] + xd[i+ncol] * tw[7] + xd[i+1+ncol] * tw[8];
+	 				ps = xd[i-1-ncol] * sw[0] + xd[i+1-ncol] * sw[1] + xd[i-1+ncol] * sw[2] + xd[i+1+ncol] * sw[3];
+					zx = xd[i-1-ncol] * xw[0] + xd[i+1-ncol] * xw[1] + xd[i-1] * xw[2] + xd[i+1] * xw[3] + xd[i-1+ncol] * xw[4] + xd[i+1+ncol] * xw[5];
+					zy = xd[i-1-ncol] * yw[0] + xd[i-ncol] * yw[1] + xd[i+1-ncol] * yw[2] + xd[i-1+ncol] * yw[3] + xd[i+ncol] * yw[4] + xd[i+1+ncol] * yw[5];
+					xval[i+addn] = -(pow(zy,2)*pr-2*zx*zy*ps+pow(zx,2)*pt)/((pow(zx,2)+pow(zy,2))*sqrt(1+pow(zx,2)+pow(zy,2)));
 									
 				}
 				
 			} else {
-			
-				double xw[6] = {-1,-1,-1,1,1,1};
-				double yw[6] = {-1,1,-1,1,-1,1};
+				double xw[6] = {-1,1,-1,1,-1,1};
+				double yw[6] = {1,1,1,-1,-1,-1};
+				double sw[4] = {-1,1,1,-1};
+				double rw[9] = {1,-2,1,1,-2,1,1,-2,1};
+				double tw[9] = {1,1,1,-2,-2,-2,1,1,1};
+
 				for (i=0; i<6; i++) {
-					xw[i] = xw[i] / (-8 * dx);
-					yw[i] = yw[i] / (8 * dy);
+					xw[i] = xw[i] / (6 * dx);
+					yw[i] = yw[i] / (6 * dy);
+				}
+				for (i=0; i<9; i++) {
+					tw[i] = tw[i] / (3 * pow(dy, 2));
+					rw[i] = rw[i] / (3 * pow(dx, 2));
+				}
+				for (i=0; i<4; i++) {
+					sw[i] = sw[i] / (4 * dy * dx);
 				}
 				for (i = ncol+1; i < (ncol * (nrow-1)-1); i++) {
-					zx = xd[i-1-ncol] * xw[0] + xd[i-1] * xw[1] + xd[i-1+ncol] * xw[2]
-							+ xd[i+1-ncol] * xw[3] + xd[i+1] * xw[4] + xd[i+1+ncol] * xw[5];
-					zy = xd[i-1-ncol] * yw[0] + xd[i-1+ncol] * yw[1] + xd[i-ncol] * yw[2] 
-							+ xd[i+ncol] * yw[3] + xd[i+1-ncol] * yw[4] + xd[i+1+ncol] * yw[5];
-					r = ( xd[i-1-ncol] + xd[i-1] + xd[i-1+ncol] + xd[i+1-ncol] + xd[i+1] + xd[i+1+ncol] - 2 * ( xd[i-ncol] + xd[i] + xd[i+ncol] ) ) / ( 3 * pow(dx,3) );
-					t = ( xd[i-1-ncol] + xd[i-ncol] + xd[i+1-ncol] + xd[i-1+ncol] + xd[i+ncol] + xd[i+1+ncol] - 2 * ( xd[i-1] + xd[i] + xd[i+1] ) ) / ( 3 * pow(dy,3) );
-	 				s = ( xd[i+1-ncol] + xd[i-1+ncol] - xd[i-1-ncol] - xd[i+1+ncol] ) / ( 4 * dx * dy );
-					xval[i+addn] = -(pow(zy,2)*r-2*zx*zy*s+pow(zx,2)*t)/((pow(zx,2)+pow(zy,2))*sqrt(1+pow(zx,2)+pow(zy,2)));
+					pr = xd[i-1-ncol] * rw[0] + xd[i-ncol] * rw[1] + xd[i+1-ncol] * rw[2] + xd[i-1] * rw[3] + xd[i] * rw[4] + xd[i+1] * rw[5] + xd[i-1+ncol] * rw[6] + xd[i+ncol] * rw[7] + xd[i+1+ncol] * rw[8];
+					pt = xd[i-1-ncol] * tw[0] + xd[i-ncol] * tw[1] + xd[i+1-ncol] * tw[2] + xd[i-1] * tw[3] + xd[i] * tw[4] + xd[i+1] * tw[5] + xd[i-1+ncol] * tw[6] + xd[i+ncol] * tw[7] + xd[i+1+ncol] * tw[8];
+	 				ps = xd[i-1-ncol] * sw[0] + xd[i+1-ncol] * sw[1] + xd[i-1+ncol] * sw[2] + xd[i+1+ncol] * sw[3];
+					zx = xd[i-1-ncol] * xw[0] + xd[i+1-ncol] * xw[1] + xd[i-1] * xw[2] + xd[i+1] * xw[3] + xd[i-1+ncol] * xw[4] + xd[i+1+ncol] * xw[5];
+					zy = xd[i-1-ncol] * yw[0] + xd[i-ncol] * yw[1] + xd[i+1-ncol] * yw[2] + xd[i-1+ncol] * yw[3] + xd[i+ncol] * yw[4] + xd[i+1+ncol] * yw[5];
+					xval[i+addn] = -(pow(zy,2)*pr-2*zx*zy*ps+pow(zx,2)*pt)/((pow(zx,2)+pow(zy,2))*sqrt(1+pow(zx,2)+pow(zy,2)));
 
 				}
 			}
@@ -493,51 +513,74 @@ SEXP _do_terrain_(SEXP d, SEXP dim, SEXP res, SEXP un, SEXP opt, SEXP lonlat, SE
 	if (option[9]) {
 		// profile curvature 8 neighbors - Herve Guillon	
 			addn = add * n;
-			double r, s, t;
+			double pr, ps, pt;
 			if (geo) {
 				int k, q;
-				double xwi[6] = {-1,-1,-1,1,1,1};
+				double xwi[6] = {-1,1,-1,1,-1,1};
 				double xw[6] = {0,0,0,0,0,0};
-				double yw[6] = {-1,1,-1,1,-1,1};
+				double yw[6] = {1,1,1,-1,-1,-1};
+				double swi[4] = {-1,1,1,-1};
+				double sw[4] = {0,0,0,0};
+				double rwi[9] = {1,-2,1,1,-2,1,1,-2,1};
+				double rw[9] = {0,0,0,0,0,0,0,0,0};
+				double tw[9] = {1,1,1,-2,-2,-2,1,1,1};
 				
 				for (i=0; i<6; i++) {
-					yw[i] = yw[i] / (8 * dy);
+					yw[i] = yw[i] / (6 * dy);
+				}
+				for (i=0; i<9; i++) {
+					tw[i] = tw[i] / (3 * pow(dy, 2));
 				}
 							
 				for (i = ncol; i < (ncol * (nrow-1)-1); i++) {
 					if (i % ncol == 0) {
 						q = i / ncol;
 						for (k=0; k<6; k++) {
-							xw[k] = xwi[k] / (8 * ddx[q]);
+							xw[k] = xwi[k] / (6 * ddx[q]);
+						}
+						for (k=0; k<4; k++) {
+							sw[k] = swi[k] / (4 * dy * ddx[q]);
+						}
+						for (k=0; k<9; k++) {
+							rw[k] = rwi[k] / (3 * pow(ddx[q],2));
 						}
 					}
-					zx = xd[i-1-ncol] * xw[0] + xd[i-1] * xw[1] + xd[i-1+ncol] * xw[2]
-							+ xd[i+1-ncol] * xw[3] + xd[i+1] * xw[4] + xd[i+1+ncol] * xw[5];
-					zy = xd[i-1-ncol] * yw[0] + xd[i-1+ncol] * yw[1] + xd[i-ncol] * yw[2] 
-							+ xd[i+ncol] * yw[3] + xd[i+1-ncol] * yw[4] + xd[i+1+ncol] * yw[5];
-					r = ( xd[i-1-ncol] + xd[i-1] + xd[i-1+ncol] + xd[i+1-ncol] + xd[i+1] + xd[i+1+ncol] - 2 * ( xd[i-ncol] + xd[i] + xd[i+ncol] ) ) / ( 3 * pow(dx,3) );
-					t = ( xd[i-1-ncol] + xd[i-ncol] + xd[i+1-ncol] + xd[i-1+ncol] + xd[i+ncol] + xd[i+1+ncol] - 2 * ( xd[i-1] + xd[i] + xd[i+1] ) ) / ( 3 * pow(dy,3) );
-	 				s = ( xd[i+1-ncol] + xd[i-1+ncol] - xd[i-1-ncol] - xd[i+1+ncol] ) / ( 4 * dx * dy );
-					xval[i+addn] = -(pow(zx,2)*r+2*zx*zy*s+pow(zy,2)*t)/((pow(zx,2)+pow(zy,2))*pow(sqrt(1+pow(zx,2)+pow(zy,2)),3));  
+					pr = xd[i-1-ncol] * rw[0] + xd[i-ncol] * rw[1] + xd[i+1-ncol] * rw[2] + xd[i-1] * rw[3] + xd[i] * rw[4] + xd[i+1] * rw[5] + xd[i-1+ncol] * rw[6] + xd[i+ncol] * rw[7] + xd[i+1+ncol] * rw[8];
+					pt = xd[i-1-ncol] * tw[0] + xd[i-ncol] * tw[1] + xd[i+1-ncol] * tw[2] + xd[i-1] * tw[3] + xd[i] * tw[4] + xd[i+1] * tw[5] + xd[i-1+ncol] * tw[6] + xd[i+ncol] * tw[7] + xd[i+1+ncol] * tw[8];
+	 				ps = xd[i-1-ncol] * sw[0] + xd[i+1-ncol] * sw[1] + xd[i-1+ncol] * sw[2] + xd[i+1+ncol] * sw[3];
+					zx = xd[i-1-ncol] * xw[0] + xd[i+1-ncol] * xw[1] + xd[i-1] * xw[2] + xd[i+1] * xw[3] + xd[i-1+ncol] * xw[4] + xd[i+1+ncol] * xw[5];
+					zy = xd[i-1-ncol] * yw[0] + xd[i-ncol] * yw[1] + xd[i+1-ncol] * yw[2] + xd[i-1+ncol] * yw[3] + xd[i+ncol] * yw[4] + xd[i+1+ncol] * yw[5];
+					xval[i+addn] = -(pow(zx,2)*pr+2*zx*zy*ps+pow(zy,2)*pt)/((pow(zx,2)+pow(zy,2))*sqrt(pow(1+pow(zx,2)+pow(zy,2),3)));
+									
 				}
 				
 			} else {
 			
-				double xw[6] = {-1,-1,-1,1,1,1};
-				double yw[6] = {-1,1,-1,1,-1,1};
+				double xw[6] = {-1,1,-1,1,-1,1};
+				double yw[6] = {1,1,1,-1,-1,-1};
+				double sw[4] = {-1,1,1,-1};
+				double rw[9] = {1,-2,1,1,-2,1,1,-2,1};
+				double tw[9] = {1,1,1,-2,-2,-2,1,1,1};
+
 				for (i=0; i<6; i++) {
-					xw[i] = xw[i] / (-8 * dx);
-					yw[i] = yw[i] / (8 * dy);
+					xw[i] = xw[i] / (6 * dx);
+					yw[i] = yw[i] / (6 * dy);
 				}
+				for (i=0; i<9; i++) {
+					tw[i] = tw[i] / (3 * pow(dy, 2));
+					rw[i] = rw[i] / (3 * pow(dx, 2));
+				}
+				for (i=0; i<4; i++) {
+					sw[i] = sw[i] / (4 * dy * dx);
+				}
+
 				for (i = ncol+1; i < (ncol * (nrow-1)-1); i++) {
-					zx = xd[i-1-ncol] * xw[0] + xd[i-1] * xw[1] + xd[i-1+ncol] * xw[2]
-							+ xd[i+1-ncol] * xw[3] + xd[i+1] * xw[4] + xd[i+1+ncol] * xw[5];
-					zy = xd[i-1-ncol] * yw[0] + xd[i-1+ncol] * yw[1] + xd[i-ncol] * yw[2] 
-							+ xd[i+ncol] * yw[3] + xd[i+1-ncol] * yw[4] + xd[i+1+ncol] * yw[5];
-					r = ( xd[i-1-ncol] + xd[i-1] + xd[i-1+ncol] + xd[i+1-ncol] + xd[i+1] + xd[i+1+ncol] - 2 * ( xd[i-ncol] + xd[i] + xd[i+ncol] ) ) / ( 3 * pow(dx,3) );
-					t = ( xd[i-1-ncol] + xd[i-ncol] + xd[i+1-ncol] + xd[i-1+ncol] + xd[i+ncol] + xd[i+1+ncol] - 2 * ( xd[i-1] + xd[i] + xd[i+1] ) ) / ( 3 * pow(dy,3) );
-	 				s = ( xd[i+1-ncol] + xd[i-1+ncol] - xd[i-1-ncol] - xd[i+1+ncol] ) / ( 4 * dx * dy );
-					xval[i+addn] = -(pow(zx,2)*r+2*zx*zy*s+pow(zy,2)*t)/((pow(zx,2)+pow(zy,2))*pow(sqrt(1+pow(zx,2)+pow(zy,2)),3));  
+					pr = xd[i-1-ncol] * rw[0] + xd[i-ncol] * rw[1] + xd[i+1-ncol] * rw[2] + xd[i-1] * rw[3] + xd[i] * rw[4] + xd[i+1] * rw[5] + xd[i-1+ncol] * rw[6] + xd[i+ncol] * rw[7] + xd[i+1+ncol] * rw[8];
+					pt = xd[i-1-ncol] * tw[0] + xd[i-ncol] * tw[1] + xd[i+1-ncol] * tw[2] + xd[i-1] * tw[3] + xd[i] * tw[4] + xd[i+1] * tw[5] + xd[i-1+ncol] * tw[6] + xd[i+ncol] * tw[7] + xd[i+1+ncol] * tw[8];
+	 				ps = xd[i-1-ncol] * sw[0] + xd[i+1-ncol] * sw[1] + xd[i-1+ncol] * sw[2] + xd[i+1+ncol] * sw[3];
+					zx = xd[i-1-ncol] * xw[0] + xd[i+1-ncol] * xw[1] + xd[i-1] * xw[2] + xd[i+1] * xw[3] + xd[i-1+ncol] * xw[4] + xd[i+1+ncol] * xw[5];
+					zy = xd[i-1-ncol] * yw[0] + xd[i-ncol] * yw[1] + xd[i+1-ncol] * yw[2] + xd[i-1+ncol] * yw[3] + xd[i+ncol] * yw[4] + xd[i+1+ncol] * yw[5];
+					xval[i+addn] = -(pow(zx,2)*pr+2*zx*zy*ps+pow(zy,2)*pt)/((pow(zx,2)+pow(zy,2))*sqrt(pow(1+pow(zx,2)+pow(zy,2),3)));  
 				}
 			}
 

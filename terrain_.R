@@ -144,7 +144,7 @@ terrain_ <- function(x, opt='slope', unit='radians', neighbors=8, filename='', .
 
 	lonlat <- FALSE
 
-	if ('slope' %in% opt | 'aspect' %in% opt | 'flowdir' %in% opt) {
+	if ('slope' %in% opt | 'aspect' %in% opt | 'flowdir' %in% opt | 'curvplan' %in% opt | 'curvprof' %in% opt) {
 
 		stopifnot(is.character(unit))
 
@@ -189,8 +189,6 @@ terrain_ <- function(x, opt='slope', unit='radians', neighbors=8, filename='', .
 	lonlat <- as.integer(lonlat)
 
 	
-
-
 	if (canProcessInMemory(out)) {
 
 		if (lonlat) {
